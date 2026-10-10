@@ -4,7 +4,21 @@ const cors = require('cors');
 const pool = require('./db');
 
 const app = express();
-app.use(cors());
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
+  .split(',')
+  .map((o) => o.trim());
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // No Origin header means Postman, curl or a script, not a browser page
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(null, false); // browser will block the response
+    },
+  })
+);
 app.use(express.json());
 
 // Admin guard: requires the x-admin-key header to match ADMIN_KEY
@@ -19,20 +33,26 @@ app.get('/', (req, res) => res.json({ status: 'ok' }));
 
 // Admin: create a trip
 app.post('/admin/trips', requireAdmin, async (req, res) => {
-  const { origin, destination, departure_time, total_seats, price } = req.body;
+  const { origin, destination, departure_time, bus_type = 'Standard', price } = req.body;
 
-  if (!origin || !destination || !departure_time || !total_seats || price == null) {
+  if (!origin || !destination || !departure_time || price == null) {
     return res.status(400).json({ error: 'All fields are required' });
+  }
+  if (!['Standard', 'Executive'].includes(bus_type)) {
+    return res.status(400).json({ error: 'bus_type must be Standard or Executive' });
   }
   if (isNaN(Date.parse(departure_time))) {
     return res.status(400).json({ error: 'Invalid departure_time' });
   }
 
+  // Seat count is set by bus class, so it can't be entered wrongly
+  const total_seats = bus_type === 'Executive' ? 30 : 44;
+
   try {
     const { rows } = await pool.query(
-      `INSERT INTO trips (origin, destination, departure_time, total_seats, price)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [origin.trim(), destination.trim(), departure_time, total_seats, price]
+      `INSERT INTO trips (origin, destination, departure_time, bus_type, total_seats, price)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [origin.trim(), destination.trim(), departure_time, bus_type, total_seats, price]
     );
     res.status(201).json(rows[0]);
   } catch (err) {

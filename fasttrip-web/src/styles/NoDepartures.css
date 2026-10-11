@@ -1,0 +1,7 @@
+.empty {
+  color: var(--muted);
+  padding: 40px 0;
+  text-align: center;
+}
+
+.empty .btn { margin-top: 14px; }

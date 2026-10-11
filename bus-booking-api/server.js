@@ -32,33 +32,64 @@ function requireAdmin(req, res, next) {
 app.get('/', (req, res) => res.json({ status: 'ok' }));
 
 // Admin: create a trip
+// Admin: create trips. Either one departure_time, or a date range x list of times.
 app.post('/admin/trips', requireAdmin, async (req, res) => {
-  const { origin, destination, departure_time, bus_type = 'Standard', price } = req.body;
+  const {
+    origin, destination, price, departure_time,
+    bus_type = 'Standard', start_date, days = 1, times,
+  } = req.body;
 
-  if (!origin || !destination || !departure_time || price == null) {
-    return res.status(400).json({ error: 'All fields are required' });
+  if (!origin || !destination || price == null) {
+    return res.status(400).json({ error: 'origin, destination and price are required' });
   }
   if (!['Standard', 'Executive'].includes(bus_type)) {
     return res.status(400).json({ error: 'bus_type must be Standard or Executive' });
   }
-  if (isNaN(Date.parse(departure_time))) {
-    return res.status(400).json({ error: 'Invalid departure_time' });
+
+  // Build the list of departures (Ghana is UTC+0, so "Z" is the local time)
+  let departures = [];
+  if (start_date && Array.isArray(times)) {
+    const validDate = /^\d{4}-\d{2}-\d{2}$/.test(start_date) && !isNaN(Date.parse(start_date));
+    const validTimes =
+      times.length >= 1 && times.length <= 20 &&
+      times.every((t) => /^([01]\d|2[0-3]):[0-5]\d$/.test(t));
+    if (!validDate || !validTimes || !Number.isInteger(days) || days < 1 || days > 30) {
+      return res.status(400).json({
+        error: 'Use start_date YYYY-MM-DD, days 1-30, and times like "06:00"',
+      });
+    }
+    for (let i = 0; i < days; i++) {
+      const d = new Date(`${start_date}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + i);
+      const day = d.toISOString().slice(0, 10);
+      for (const t of times) departures.push(`${day}T${t}:00Z`);
+    }
+  } else if (departure_time && !isNaN(Date.parse(departure_time))) {
+    departures = [departure_time];
+  } else {
+    return res.status(400).json({ error: 'Provide departure_time, or start_date with times' });
   }
 
-  // Seat count is set by bus class, so it can't be entered wrongly
   const total_seats = bus_type === 'Executive' ? 30 : 44;
 
   try {
     const { rows } = await pool.query(
       `INSERT INTO trips (origin, destination, departure_time, bus_type, total_seats, price)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [origin.trim(), destination.trim(), departure_time, bus_type, total_seats, price]
+       SELECT $1, $2, d, $3, $4, $5 FROM unnest($6::timestamptz[]) AS d
+       ON CONFLICT (origin, destination, departure_time, bus_type) DO NOTHING
+       RETURNING *`,
+      [origin.trim(), destination.trim(), bus_type, total_seats, price, departures]
     );
-    res.status(201).json(rows[0]);
-  } catch (err) {
-    if (err.code === '23505') {
-      return res.status(409).json({ error: 'This trip already exists' });
+
+    if (rows.length === 0) {
+      return res.status(409).json({ error: 'These trips already exist' });
     }
+    res.status(201).json({
+      created: rows.length,
+      skipped: departures.length - rows.length,
+      trips: rows,
+    });
+  } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }

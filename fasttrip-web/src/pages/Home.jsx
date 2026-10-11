@@ -1,36 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { MapPin, Calendar, Search } from 'lucide-react';
-import TripCard from '../components/TripCard.jsx';
+import WhyFastTrip from '../components/WhyFastTrip.jsx';
+import RouteList from '../components/RouteList.jsx';
+import NoDepartures from '../components/NoDepartures.jsx';
+import { useTrips } from '../hooks/useTrips.js';
+import { localDate, groupRoutes, dayLabel, nextDepartureDate } from '../utils/trips.js';
 import '../styles/Home.css';
 
-const API = import.meta.env.VITE_API_URL;
-const EMPTY = { origin: '', destination: '', date: '' };
-
-// YYYY-MM-DD in the browser's own timezone
-function localDate(iso) {
-  const d = new Date(iso);
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${m}-${day}`;
-}
+const today = localDate(new Date());
+const START = { origin: '', destination: '', date: today };
 
 export default function Home() {
-  const [trips, setTrips] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [form, setForm] = useState(EMPTY);
-  const [filters, setFilters] = useState(EMPTY);
-
-  useEffect(() => {
-    fetch(`${API}/trips`)
-      .then((r) => {
-        if (!r.ok) throw new Error();
-        return r.json();
-      })
-      .then(setTrips)
-      .catch(() => setError('Could not load trips. Please try again.'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { trips, loading, error } = useTrips();
+  const [form, setForm] = useState(START);
+  const [filters, setFilters] = useState(START);
+  const resultsRef = useRef(null);
 
   const origins = [...new Set(trips.map((t) => t.origin))].sort();
   const destinations = [...new Set(trips.map((t) => t.destination))].sort();
@@ -39,10 +23,28 @@ export default function Home() {
     (t) =>
       (!filters.origin || t.origin === filters.origin) &&
       (!filters.destination || t.destination === filters.destination) &&
-      (!filters.date || localDate(t.departure_time) === filters.date)
+      localDate(t.departure_time) === filters.date
   );
+  const groups = groupRoutes(visible);
+
+  const nextDate =
+    !loading && visible.length === 0
+      ? nextDepartureDate(trips, filters.date, filters.origin, filters.destination)
+      : null;
 
   const update = (key) => (e) => setForm({ ...form, [key]: e.target.value });
+
+  const onSearch = (e) => {
+    e.preventDefault();
+    setFilters(form);
+    resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const jumpTo = (date) => {
+    const next = { ...filters, date };
+    setForm(next);
+    setFilters(next);
+  };
 
   return (
     <main>
@@ -54,13 +56,7 @@ export default function Home() {
       </section>
 
       <div className="container">
-        <form
-          className="search"
-          onSubmit={(e) => {
-            e.preventDefault();
-            setFilters(form);
-          }}
-        >
+        <form className="search" onSubmit={onSearch}>
           <label className="search__field">
             <MapPin size={18} />
             <select value={form.origin} onChange={update('origin')}>
@@ -79,26 +75,31 @@ export default function Home() {
 
           <label className="search__field">
             <Calendar size={18} />
-            <input type="date" value={form.date} onChange={update('date')} />
+            <input type="date" value={form.date} min={today} required onChange={update('date')} />
           </label>
 
           <button type="submit" className="btn search__btn">
             <Search size={18} /> Search
           </button>
         </form>
+      </div>
 
-        <p className="results-count">
-          {loading ? 'Loading trips… the server may take a moment to wake up.' : `${visible.length} trips available`}
+      <WhyFastTrip />
+
+      <div className="container results" ref={resultsRef}>
+        <h2 className="results__title">Available trips</h2>
+        <p className="results__sub">
+          {loading
+            ? 'Loading trips… the server may take a moment to wake up.'
+            : `${dayLabel(filters.date)} · ${visible.length} departures`}
         </p>
 
         {error && <p className="error">{error}</p>}
 
-        <div className="trip-grid">
-          {visible.map((t) => <TripCard key={t.id} trip={t} />)}
-        </div>
+        {!loading && !error && groups.length > 0 && <RouteList groups={groups} />}
 
-        {!loading && !error && visible.length === 0 && (
-          <p className="empty">No trips match your search. Try different cities or a different date.</p>
+        {!loading && !error && groups.length === 0 && (
+          <NoDepartures date={filters.date} today={today} nextDate={nextDate} onJump={jumpTo} />
         )}
       </div>
     </main>

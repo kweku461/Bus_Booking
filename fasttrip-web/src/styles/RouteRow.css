@@ -1,0 +1,18 @@
+.route-row { border-top: 1px solid var(--border); }
+
+.route-row__city { font-weight: 600; font-size: 1.05rem; }
+
+.route-row__schedule strong {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+}
+
+.route-row__price strong { display: block; font-size: 1.2rem; }
+.route-row__price small { color: var(--muted); }
+.route-row__price small.is-low { color: var(--amber); font-weight: 600; }
+
+.route-row--executive .chip { background: var(--gold-soft); color: var(--gold); }
+.route-row--executive .chip:hover:not(:disabled) { border-color: var(--gold); }
+.route-row--executive .chip--selected { background: var(--gold); color: #fff; }
+.route-row--executive .chip:disabled { background: #f0f1f5; color: #b0b4c0; }

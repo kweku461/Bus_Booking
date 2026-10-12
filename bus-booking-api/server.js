@@ -1,12 +1,63 @@
 require('dotenv').config();
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
+
+const HOLD_MINUTES = 10;
+const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I, O, 0 or 1, so IDs are easy to read
+
+// Booking ID like FT-7K3M9QXD
+function makeReference() {
+  let s = '';
+  for (let i = 0; i < 8; i++) s += ALPHABET[crypto.randomInt(ALPHABET.length)];
+  return `FT-${s}`;
+}
+
+// Unpaid holds that ran out of time free their seats again
+async function releaseExpiredHolds() {
+  await pool.query(
+    `DELETE FROM bookings WHERE status = 'pending' AND expires_at < now()`
+  );
+}
+
+// GHS amounts go to Paystack in pesewas (GH₵1 = 100 pesewas)
+const toPesewas = (price, count) => Math.round(Number(price) * count * 100);
+
+// Small wrapper around the Paystack API. The secret key never leaves the server.
+async function paystack(path, options = {}) {
+  const res = await fetch(`https://api.paystack.co${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || !body.status) {
+    const err = new Error(body.message || 'Paystack error');
+    err.status = res.status;
+    throw err;
+  }
+  return body.data;
+}
+
+// A booking (all its seats) plus its trip, found by booking ID
+async function loadBooking(reference) {
+  const b = await pool.query(
+    'SELECT * FROM bookings WHERE reference = $1 ORDER BY seat_number',
+    [reference]
+  );
+  if (b.rowCount === 0) return null;
+  const t = await pool.query('SELECT * FROM trips WHERE id = $1', [b.rows[0].trip_id]);
+  return { trip: t.rows[0], bookings: b.rows };
+}
 
 const app = express();
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
   .split(',')
   .map((o) => o.trim());
+const FRONTEND_URL = (process.env.FRONTEND_URL || allowedOrigins[0]).replace(/\/$/, '');
 
 app.use(
   cors({
@@ -31,7 +82,6 @@ function requireAdmin(req, res, next) {
 
 app.get('/', (req, res) => res.json({ status: 'ok' }));
 
-// Admin: create a trip
 // Admin: create trips. Either one departure_time, or a date range x list of times.
 app.post('/admin/trips', requireAdmin, async (req, res) => {
   const {
@@ -95,11 +145,13 @@ app.post('/admin/trips', requireAdmin, async (req, res) => {
   }
 });
 
-// Public: list upcoming trips with seats left, optional filters
+// Public: list upcoming trips with seats left (held seats count as taken)
 app.get('/trips', async (req, res) => {
   const { origin = null, destination = null, date = null } = req.query;
 
   try {
+    await releaseExpiredHolds();
+
     const { rows } = await pool.query(
       `SELECT t.*, t.total_seats - COUNT(b.id)::int AS seats_left
        FROM trips t
@@ -127,6 +179,8 @@ app.get('/trips/:id/seats', async (req, res) => {
   }
 
   try {
+    await releaseExpiredHolds();
+
     const trip = await pool.query('SELECT * FROM trips WHERE id = $1', [tripId]);
     if (trip.rowCount === 0) {
       return res.status(404).json({ error: 'Trip not found' });
@@ -147,7 +201,7 @@ app.get('/trips/:id/seats', async (req, res) => {
   }
 });
 
-// Public: book one or more seats on a trip
+// Public: hold seats and start the payment. Returns the Paystack checkout link.
 app.post('/bookings', async (req, res) => {
   const { trip_id, seats, name, email, note } = req.body;
 
@@ -167,8 +221,14 @@ app.post('/bookings', async (req, res) => {
   if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
     return res.status(400).json({ error: 'A valid email is required' });
   }
+  if (!process.env.PAYSTACK_SECRET_KEY) {
+    console.error('PAYSTACK_SECRET_KEY is not set');
+    return res.status(500).json({ error: 'Payments are not configured' });
+  }
 
   try {
+    await releaseExpiredHolds();
+
     const trip = await pool.query('SELECT * FROM trips WHERE id = $1', [trip_id]);
     if (trip.rowCount === 0) {
       return res.status(404).json({ error: 'Trip not found' });
@@ -184,19 +244,138 @@ app.post('/bookings', async (req, res) => {
 
     // One INSERT statement = all seats succeed or none do.
     // The UNIQUE (trip_id, seat_number) constraint is the real guard.
+    const reference = makeReference();
     const { rows } = await pool.query(
-      `INSERT INTO bookings (trip_id, seat_number, name, email, note)
-       SELECT $1, s, $3, $4, $5 FROM unnest($2::int[]) AS s
+      `INSERT INTO bookings
+         (trip_id, seat_number, name, email, note, status, reference, expires_at)
+       SELECT $1, s, $3, $4, $5, 'pending', $6, now() + $7::int * interval '1 minute'
+       FROM unnest($2::int[]) AS s
        RETURNING *`,
-      [trip_id, seats, name.trim(), email.trim(), note || null]
+      [trip_id, seats, name.trim(), email.trim(), note || null, reference, HOLD_MINUTES]
     );
 
-    res.status(201).json({ trip: trip.rows[0], bookings: rows });
+    // The amount is worked out here, never taken from the browser
+    const amount = toPesewas(trip.rows[0].price, seats.length) / 100;
+
+    let authorization_url;
+    try {
+      const init = await paystack('/transaction/initialize', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: email.trim(),
+          amount: Math.round(amount * 100),
+          currency: 'GHS',
+          reference,
+          callback_url: `${FRONTEND_URL}/payment/callback`,
+          // Kept so a late payment can still be matched to its seats
+          metadata: { trip_id, seats, name: name.trim(), note: note || null },
+        }),
+      });
+      authorization_url = init.authorization_url;
+    } catch (err) {
+      // Couldn't start the payment, so give the seats straight back
+      await pool.query('DELETE FROM bookings WHERE reference = $1', [reference]);
+      console.error('Paystack initialize failed:', err.message);
+      return res.status(502).json({ error: 'Could not start the payment. Please try again.' });
+    }
+
+    res.status(201).json({
+      reference,
+      amount,
+      expires_at: rows[0].expires_at,
+      authorization_url,
+      trip: trip.rows[0],
+    });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({
         error: 'One or more of those seats were just taken. Please pick again.',
       });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public: confirm a payment with Paystack, then confirm the seats.
+// Safe to call more than once for the same booking ID.
+app.post('/payments/verify', async (req, res) => {
+  const { reference } = req.body;
+  if (typeof reference !== 'string' || !/^FT-[A-Z0-9]{8}$/.test(reference)) {
+    return res.status(400).json({ error: 'Invalid booking ID' });
+  }
+
+  try {
+    // Ask Paystack directly. We never trust the browser's word that it was paid.
+    const tx = await paystack(`/transaction/verify/${reference}`);
+    if (tx.status !== 'success') {
+      return res.status(402).json({ error: 'Payment not completed', payment_status: tx.status });
+    }
+
+    let found = await loadBooking(reference);
+
+    if (!found) {
+      // The hold ran out before the payment finished, so the seats were released.
+      // Try to take the same seats back using the details saved with the payment.
+      const m = tx.metadata || {};
+      const seats = Array.isArray(m.seats) ? m.seats : [];
+      const t = Number.isInteger(m.trip_id)
+        ? await pool.query('SELECT price FROM trips WHERE id = $1', [m.trip_id])
+        : { rowCount: 0 };
+
+      if (t.rowCount === 0 || seats.length === 0) {
+        console.error('PAID BUT NO BOOKING. Refund needed:', reference);
+        return res.status(409).json({
+          error: 'We could not match this payment to a booking. Please contact support.',
+          needs_refund: true,
+        });
+      }
+      if (tx.amount !== toPesewas(t.rows[0].price, seats.length) || tx.currency !== 'GHS') {
+        console.error('Amount mismatch on late payment:', reference);
+        return res.status(409).json({ error: 'Payment amount does not match this booking' });
+      }
+
+      try {
+        await pool.query(
+          `INSERT INTO bookings
+             (trip_id, seat_number, name, email, note, status, reference, paid_at)
+           SELECT $1, s, $3, $4, $5, 'confirmed', $6, now() FROM unnest($2::int[]) AS s`,
+          [m.trip_id, seats, m.name, tx.customer.email, m.note || null, reference]
+        );
+      } catch (err) {
+        if (err.code === '23505') {
+          console.error('PAID BUT SEATS TAKEN. Refund needed:', reference);
+          return res.status(409).json({
+            error: 'Your payment went through, but those seats were taken while it was processing. You will be refunded.',
+            needs_refund: true,
+          });
+        }
+        throw err;
+      }
+      found = await loadBooking(reference);
+    } else {
+      const expected = toPesewas(found.trip.price, found.bookings.length);
+      if (tx.amount !== expected || tx.currency !== 'GHS') {
+        console.error('Amount mismatch:', reference, tx.amount, expected);
+        return res.status(409).json({ error: 'Payment amount does not match this booking' });
+      }
+      await pool.query(
+        `UPDATE bookings
+         SET status = 'confirmed', paid_at = COALESCE(paid_at, now())
+         WHERE reference = $1 AND status = 'pending'`,
+        [reference]
+      );
+      found = await loadBooking(reference);
+    }
+
+    res.json({
+      ...found,
+      reference,
+      amount: toPesewas(found.trip.price, found.bookings.length) / 100,
+    });
+  } catch (err) {
+    if (err.status === 404) {
+      return res.status(404).json({ error: 'No payment found for this booking ID' });
     }
     console.error(err);
     res.status(500).json({ error: 'Server error' });

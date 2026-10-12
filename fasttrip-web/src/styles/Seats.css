@@ -130,3 +130,11 @@
   .seats-layout { grid-template-columns: 1fr; }
   .panel { position: static; }
 }
+
+.panel__secure {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

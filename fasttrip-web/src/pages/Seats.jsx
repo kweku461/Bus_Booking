@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { Link, useParams } from 'react-router-dom';
+import { ArrowLeft, Lock } from 'lucide-react';
 import '../styles/Seats.css';
 
 const API = import.meta.env.VITE_API_URL;
@@ -9,7 +9,6 @@ const COLS = { Standard: 4, Executive: 3 }; // 2+2 and 2+1 layouts
 
 export default function Seats() {
   const { id } = useParams();
-  const navigate = useNavigate();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -81,9 +80,11 @@ export default function Seats() {
       const body = await res.json();
 
       if (res.ok) {
-        navigate('/confirmation', { state: body });
+        // Seats are now held. Hand over to Paystack to pay.
+        window.location.assign(body.authorization_url);
         return;
       }
+
       setFormError(body.error || 'Something went wrong.');
       if (res.status === 409) {
         setSelected([]); // someone else got there first, so reload the map
@@ -91,9 +92,8 @@ export default function Seats() {
       }
     } catch {
       setFormError('Could not reach the server. Please try again.');
-    } finally {
-      setSubmitting(false);
     }
+    setSubmitting(false);
   };
 
   const Seat = ({ n }) => (
@@ -174,8 +174,12 @@ export default function Seats() {
           {formError && <p className="error">{formError}</p>}
 
           <button className="btn panel__btn" disabled={!selected.length || submitting}>
-            {submitting ? 'Booking…' : 'Confirm booking'}
+            {submitting ? 'Redirecting to payment…' : 'Continue to payment'}
           </button>
+
+          <p className="panel__secure">
+            <Lock size={14} /> Secure payment with Paystack. Your seats are held for 10 minutes.
+          </p>
         </form>
       </div>
     </main>

@@ -1,0 +1,64 @@
+.ticket {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.ticket__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 28px;
+  background: linear-gradient(120deg, var(--navy), #6366f1);
+  color: #fff;
+}
+.ticket__brand { font-size: 1.3rem; font-weight: 800; }
+.ticket__badges { display: flex; align-items: center; gap: 10px; }
+
+.ticket__paid {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.ticket__route {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 28px 8px;
+}
+.ticket__route strong { font-size: 1.5rem; display: block; }
+.ticket__line { flex: 1; border-top: 2px dotted #c7c9d9; }
+
+.ticket__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+  padding: 22px 28px 28px;
+}
+
+.ticket small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.ticket__grid strong { font-size: 1.05rem; }
+
+.ticket__cut { border-top: 2px dashed var(--border); }
+
+.ticket__bottom {
+  display: flex;
+  justify-content: space-between;
+  padding: 22px 28px;
+  background: #fafbff;
+}
+.ticket__ref { font-size: 1.4rem; letter-spacing: 0.04em; }

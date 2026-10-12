@@ -7,6 +7,8 @@
   height: 76px;
   display: flex;
   align-items: center;
+  gap: 44px;
+  padding: 0 32px;
 }
 
 .navbar__brand {
@@ -32,13 +34,13 @@
 .navbar__links {
   display: flex;
   gap: 28px;
-  margin-left: auto;
 }
 
 .navbar__links a {
   color: var(--muted);
   text-decoration: none;
   font-weight: 600;
+  white-space: nowrap;
   padding: 6px 0;
   border-bottom: 2px solid transparent;
 }
@@ -50,6 +52,24 @@
   border-bottom-color: var(--indigo);
 }
 
-@media (max-width: 520px) {
-  .navbar__links { gap: 18px; }
+/* Phones: four links won't fit beside the logo, so they drop to their own row */
+@media (max-width: 700px) {
+  .navbar__inner {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 6px 0;
+    padding: 12px 20px;
+  }
+  .navbar__links {
+    order: 3;
+    width: 100%;
+    gap: 22px;
+    overflow-x: auto;
+  }
+}
+
+.navbar__logo-img {
+  height: 56px;
+  width: auto;
+  display: block;
 }

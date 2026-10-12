@@ -84,3 +84,10 @@
     grid-template-columns: 1fr;
   }
 }
+
+.search__field svg { color: var(--indigo); flex-shrink: 0; }
+
+.search__field:focus-within {
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 3px var(--indigo-soft);
+}

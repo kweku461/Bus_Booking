@@ -45,7 +45,7 @@
 
 .route-table {
   background: #fff;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--indigo-edge);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;

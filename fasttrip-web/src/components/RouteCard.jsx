@@ -1,50 +1,48 @@
-import { useNavigate } from 'react-router-dom';
+import { Clock, Banknote, Users } from 'lucide-react';
 import { useTripSelection } from '../hooks/useTripSelection.js';
 import { fmtTime } from '../utils/trips.js';
+import '../styles/RouteCard.css';
 
-export default function RouteCard({ group }) {
-  const navigate = useNavigate();
+export default function RouteCard({ group, onBook }) {
   const { selectedId, setSelectedId, selected } = useTripSelection(group);
-  const type = group.bus_type.toLowerCase();
+  const low = selected && selected.seats_left <= 5;
 
   return (
-    <article className={`route-card route-card--${type}`}>
-      <div className="route-card__heading">
-        <div>
-          <strong>{group.origin}</strong>
-          <span aria-hidden="true"> to </span>
-          <strong>{group.destination}</strong>
-        </div>
-        <span className={`badge badge--${type}`}>{group.bus_type}</span>
+    <article className={`route-card route-card--${group.bus_type.toLowerCase()}`}>
+      <div className="route-card__name">
+        <h3>{group.origin} - {group.destination}</h3>
+        <span className={`badge badge--${group.bus_type.toLowerCase()}`}>{group.bus_type}</span>
       </div>
 
-      <div className="route-card__schedule">
-        <strong>{group.weekday}</strong>
+      <div className="route-card__times">
+        <Clock size={20} />
         <div className="chips">
-          {group.trips.map((trip) => (
+          {group.trips.map((t) => (
             <button
-              key={trip.id}
+              key={t.id}
               type="button"
-              disabled={trip.seats_left === 0}
-              className={'chip' + (trip.id === selectedId ? ' chip--selected' : '')}
-              onClick={() => setSelectedId(trip.id)}
+              aria-pressed={t.id === selectedId}
+              disabled={t.seats_left === 0}
+              className={'chip' + (t.id === selectedId ? ' chip--selected' : '')}
+              onClick={() => setSelectedId(t.id)}
             >
-              {fmtTime(trip.departure_time)}
+              {fmtTime(t.departure_time)}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="route-card__footer">
-        <div>
-          <strong>GH₵{selected ? Number(selected.price).toFixed(2) : '—'}</strong>
-          <small>{selected ? `${selected.seats_left} seats left` : 'Sold out'}</small>
-        </div>
-        <button
-          className="btn"
-          disabled={!selected}
-          onClick={() => navigate(`/trips/${selected.id}`)}
-        >
+      <div className="route-card__buy">
+        <Banknote size={22} />
+        <strong className="route-card__price">
+          GH₵{selected ? Number(selected.price).toFixed(2) : '—'}
+        </strong>
+        <span className="route-card__per">per passenger</span>
+        <span className={'route-card__seats' + (low ? ' is-low' : '')}>
+          <Users size={15} />{' '}
+          {selected ? `${selected.seats_left} seats left` : 'Sold out'}
+        </span>
+        <button className="btn" disabled={!selected} onClick={() => onBook(selected)}>
           Book Ticket
         </button>
       </div>

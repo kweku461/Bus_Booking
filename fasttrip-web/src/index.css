@@ -1,8 +1,9 @@
 :root {
   --navy: #1e2a5e;
-  --indigo: #4f46e5;
-  --indigo-dark: #4338ca;
-  --indigo-soft: #eef0ff;
+  --indigo: #7c3aed;
+  --indigo-dark: #6d28d9;
+  --indigo-soft: #f1ebff;
+  --indigo-edge: #c4b5fd;
   --gold: #b7791f;
   --gold-soft: #fdf3dc;
   --amber: #d97706;
@@ -36,3 +37,91 @@ button {
   margin: 0 auto;
   padding: 0 24px;
 }
+
+.btn {
+  display: inline-block;
+  background: var(--indigo);
+  color: #fff;
+  border: none;
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-align: center;
+  text-decoration: none;
+}
+.btn:hover { background: var(--indigo-dark); }
+.btn:disabled { background: #c7c9d9; cursor: not-allowed; }
+
+.badge {
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.badge--standard { background: var(--indigo-soft); color: var(--indigo-dark); }
+.badge--executive { background: var(--gold-soft); color: var(--gold); }
+
+/* Time chips: purple outline, filled when selected */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.chip {
+  background: #fff;
+  color: var(--indigo-dark);
+  border: 1.5px solid var(--indigo);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.chip:hover:not(:disabled) { background: var(--indigo-soft); }
+
+.chip--selected,
+.chip--selected:hover {
+  background: var(--indigo);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.chip:disabled {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #b0b4c0;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+/* Executive buses use gold instead of purple */
+.route-card--executive .chip,
+.route-row--executive .chip {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.route-card--executive .chip:hover:not(:disabled),
+.route-row--executive .chip:hover:not(:disabled) {
+  background: var(--gold-soft);
+}
+.route-card--executive .chip--selected,
+.route-card--executive .chip--selected:hover,
+.route-row--executive .chip--selected,
+.route-row--executive .chip--selected:hover {
+  background: var(--gold);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(183, 121, 31, 0.3);
+}
+.route-card--executive .chip:disabled,
+.route-row--executive .chip:disabled {
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  color: #b0b4c0;
+}
+
+/* Extra button variants */
+.btn--block { width: 100%; }
+.btn--ghost { background: #eef0f4; color: var(--text); }
+.btn--ghost:hover { background: #e2e5eb; }

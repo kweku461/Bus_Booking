@@ -1,19 +1,20 @@
 import { Link, NavLink } from 'react-router-dom';
-import { Bus } from 'lucide-react';
+import logo from '../assets/Logo.png';
 import './Navbar.css';
 
 export default function Navbar() {
   return (
     <header className="navbar">
-      <div className="container navbar__inner">
+      <div className="navbar__inner">
         <Link to="/" className="navbar__brand">
-          <span className="navbar__logo"><Bus size={22} /></span>
-          FastTrip
+          <img src={logo} alt="FastTrip logo" className="navbar__logo-img" />
         </Link>
 
         <nav className="navbar__links">
           <NavLink to="/" end>Home</NavLink>
           <NavLink to="/routes">Routes</NavLink>
+          <NavLink to="/manage-tickets">Manage Tickets</NavLink>
+          <NavLink to="/help">Help</NavLink>
         </nav>
       </div>
     </header>

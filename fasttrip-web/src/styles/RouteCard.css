@@ -1,0 +1,44 @@
+.route-card {
+  display: grid;
+  grid-template-columns: 220px 1fr 230px;
+  gap: 28px;
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid var(--indigo-edge);
+  border-radius: var(--radius);
+  padding: 26px 28px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.route-card:hover {
+  border-color: var(--indigo);
+  box-shadow: 0 8px 28px rgba(124, 58, 237, 0.12);
+}
+
+.route-card--executive { border-color: #ecd9a4; }
+.route-card--executive:hover {
+  border-color: var(--gold);
+  box-shadow: 0 8px 28px rgba(183, 121, 31, 0.14);
+}
+
+.route-card__name h3 { font-size: 1.45rem; margin-bottom: 10px; }
+
+.route-card__times { display: flex; gap: 14px; color: var(--muted); }
+.route-card__times svg { flex-shrink: 0; margin-top: 8px; }
+
+.route-card__buy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--muted);
+}
+.route-card__price { font-size: 1.8rem; color: var(--text); }
+.route-card__per { font-size: 0.9rem; }
+.route-card__seats { font-size: 0.9rem; display: flex; align-items: center; gap: 4px; }
+.route-card__seats.is-low { color: var(--amber); font-weight: 600; }
+.route-card__buy .btn { margin-top: 8px; }
+
+@media (max-width: 900px) {
+  .route-card { grid-template-columns: 1fr; gap: 18px; }
+}

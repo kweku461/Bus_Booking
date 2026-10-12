@@ -1,10 +1,8 @@
-import { useNavigate } from 'react-router-dom';
 import { useTripSelection } from '../hooks/useTripSelection.js';
 import { fmtTime } from '../utils/trips.js';
 import '../styles/RouteRow.css';
 
-export default function RouteRow({ group }) {
-  const navigate = useNavigate();
+export default function RouteRow({ group, onBook }) {
   const { selectedId, setSelectedId, selected } = useTripSelection(group);
   const low = selected && selected.seats_left <= 5;
   const type = group.bus_type.toLowerCase();
@@ -22,6 +20,7 @@ export default function RouteRow({ group }) {
             <button
               key={t.id}
               type="button"
+              aria-pressed={t.id === selectedId}
               disabled={t.seats_left === 0}
               className={'chip' + (t.id === selectedId ? ' chip--selected' : '')}
               onClick={() => setSelectedId(t.id)}
@@ -39,11 +38,7 @@ export default function RouteRow({ group }) {
         </small>
       </div>
 
-      <button
-        className="btn"
-        disabled={!selected}
-        onClick={() => navigate(`/trips/${selected.id}`)}
-      >
+      <button className="btn" disabled={!selected} onClick={() => onBook(selected)}>
         Book Ticket
       </button>
     </div>

@@ -1,17 +1,30 @@
+import { useState } from 'react';
+import { Copy, Check } from 'lucide-react';
+import { formatDate, formatTime, formatPrice } from '../utils/format.js';
 import '../styles/Ticket.css';
-import { formatPrice } from '../utils/format.js';
-import { formatDate, formatTime } from '../utils/format.js';
 
 export default function Ticket({ trip, bookings, reference, amount }) {
+  const [copied, setCopied] = useState(false);
+
   const first = bookings[0];
   const seats = bookings.map((b) => b.seat_number).sort((a, b) => a - b);
   const total = amount ?? seats.length * Number(trip.price);
 
   const date = formatDate(trip.departure_time, {
-  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-});
-const time = formatTime(trip.departure_time);
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+  const time = formatTime(trip.departure_time);
   const paid = first.status === 'confirmed';
+
+  const copyRef = async () => {
+    try {
+      await navigator.clipboard.writeText(reference);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked, the user can still select the text */
+    }
+  };
 
   return (
     <article className="ticket">
@@ -47,7 +60,17 @@ const time = formatTime(trip.departure_time);
       <div className="ticket__bottom">
         <div>
           <small>Booking ID</small>
-          <strong className="ticket__ref">{reference}</strong>
+          <strong className="ticket__ref">
+            {reference}
+            <button
+              type="button"
+              onClick={copyRef}
+              aria-label="Copy booking ID"
+              className="ticket__copy"
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+            </button>
+          </strong>
         </div>
         <div>
           <small>{paid ? 'Total paid' : 'Total due'}</small>

@@ -62,3 +62,14 @@
   background: #fafbff;
 }
 .ticket__ref { font-size: 1.4rem; letter-spacing: 0.04em; }
+
+.ticket__copy {
+  background: none;
+  border: 0;
+  padding: 2px;
+  margin-left: 4px;
+  cursor: pointer;
+  color: var(--muted);
+  vertical-align: middle;
+}
+@media print { .ticket__copy { display: none; } }

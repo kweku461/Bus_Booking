@@ -6,6 +6,8 @@ import Seats from './pages/Seats.jsx';
 import PaymentCallback from './pages/PaymentCallback.jsx';
 import Confirmation from './pages/Confirmation.jsx';
 import ManageTickets from './pages/ManageTickets.jsx';
+import Help from './pages/Help.jsx';
+import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
   return (
@@ -18,6 +20,8 @@ export default function App() {
         <Route path="/payment/callback" element={<PaymentCallback />} />
         <Route path="/confirmation" element={<Confirmation />} />
         <Route path="/manage-tickets" element={<ManageTickets />} />
+        <Route path="/help" element={<Help />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );

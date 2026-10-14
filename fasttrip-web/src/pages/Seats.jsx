@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Lock } from 'lucide-react';
+import { formatDate, formatTime, formatPrice } from '../utils/format.js';
 import '../styles/Seats.css';
 
 const API = import.meta.env.VITE_API_URL;
@@ -17,6 +18,8 @@ export default function Seats() {
   const [form, setForm] = useState({ name: '', email: '', note: '' });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  // The seat the user tried to pick after hitting the limit ({ seat, at } so repeat clicks restart the timer)
+  const [limitHit, setLimitHit] = useState(null);
 
   const load = () =>
     fetch(`${API}/trips/${id}/seats`)
@@ -31,6 +34,13 @@ export default function Seats() {
   useEffect(() => {
     load();
   }, [id]);
+
+  // The limit message hides itself after a moment
+  useEffect(() => {
+    if (!limitHit) return;
+    const timer = setTimeout(() => setLimitHit(null), 2500);
+    return () => clearTimeout(timer);
+  }, [limitHit]);
 
   if (loading) return <p className="container seats-msg">Loading seats…</p>;
   if (error || !data) {
@@ -48,21 +58,28 @@ export default function Seats() {
   const rows = [];
   for (let i = 0; i < seats.length; i += cols) rows.push(seats.slice(i, i + cols));
 
-  const d = new Date(trip.departure_time);
-  const when =
-    d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) +
-    ' · ' +
-    d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const when = `${formatDate(trip.departure_time)} · ${formatTime(trip.departure_time)}`;
   const total = selected.length * Number(trip.price);
 
   const toggle = (n) => {
     if (taken_seats.includes(n)) return;
     setFormError('');
-    setSelected((cur) => {
-      if (cur.includes(n)) return cur.filter((s) => s !== n);
-      if (cur.length >= MAX_SEATS) return cur;
-      return [...cur, n].sort((a, b) => a - b);
-    });
+
+    // Tapping a selected seat un-selects it
+    if (selected.includes(n)) {
+      setSelected(selected.filter((s) => s !== n));
+      setLimitHit(null);
+      return;
+    }
+
+    // Sixth seat: don't add it, show the message on that seat
+    if (selected.length >= MAX_SEATS) {
+      setLimitHit({ seat: n, at: Date.now() });
+      return;
+    }
+
+    setLimitHit(null);
+    setSelected([...selected, n].sort((a, b) => a - b));
   };
 
   const update = (key) => (e) => setForm({ ...form, [key]: e.target.value });
@@ -96,20 +113,29 @@ export default function Seats() {
     setSubmitting(false);
   };
 
-  const Seat = ({ n }) => (
-    <button
-      type="button"
-      aria-label={`Seat ${n}`}
-      disabled={taken_seats.includes(n)}
-      className={
-        'seat' +
-        (taken_seats.includes(n) ? ' seat--taken' : '') +
-        (selected.includes(n) ? ' seat--selected' : '')
-      }
-      onClick={() => toggle(n)}
-    >
-      {n}
-    </button>
+  // A plain function (not a component) so React doesn't remount every seat on each render
+  const renderSeat = (n) => (
+    <span className="seat-wrap" key={n}>
+      <button
+        type="button"
+        aria-label={`Seat ${n}`}
+        disabled={taken_seats.includes(n)}
+        className={
+          'seat' +
+          (taken_seats.includes(n) ? ' seat--taken' : '') +
+          (selected.includes(n) ? ' seat--selected' : '')
+        }
+        onClick={() => toggle(n)}
+      >
+        {n}
+      </button>
+      {limitHit?.seat === n && (
+        <span className="seat-limit" role="status">
+          <span className="seat-limit__star" aria-hidden="true">*</span>
+          You can select only {MAX_SEATS} seats per booking.
+        </span>
+      )}
+    </span>
   );
 
   return (
@@ -129,10 +155,10 @@ export default function Seats() {
             {rows.map((row, i) => (
               <div className="bus__row" key={i}>
                 <div className="bus__side bus__side--left">
-                  {row.slice(0, 2).map((n) => <Seat key={n} n={n} />)}
+                  {row.slice(0, 2).map(renderSeat)}
                 </div>
                 <div className="bus__side bus__side--right">
-                  {row.slice(2).map((n) => <Seat key={n} n={n} />)}
+                  {row.slice(2).map(renderSeat)}
                 </div>
               </div>
             ))}
@@ -155,7 +181,7 @@ export default function Seats() {
 
           <div className="panel__total">
             <span>Total</span>
-            <strong>GH₵{total.toFixed(0)}</strong>
+            <strong>{formatPrice(total)}</strong>
           </div>
 
           <label className="field">

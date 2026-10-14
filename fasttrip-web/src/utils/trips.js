@@ -1,21 +1,28 @@
+const TZ = 'Africa/Accra';
+
+// YYYY-MM-DD in Ghana time, whatever the viewer's device timezone is
 export function localDate(value) {
-  const date = new Date(value);
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${date.getFullYear()}-${month}-${day}`;
+  return new Date(value).toLocaleDateString('en-CA', { timeZone: TZ });
 }
 
+// "date" is a YYYY-MM-DD string. Noon UTC keeps it on the right day in Ghana.
 export function dayLabel(date) {
-  return new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
+    timeZone: TZ,
   });
 }
 
 export function fmtTime(iso) {
   return new Date(iso)
-    .toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    .toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: TZ,
+    })
     .toLowerCase();
 }
 
@@ -33,7 +40,10 @@ export function groupRoutes(trips) {
         destination: trip.destination,
         bus_type: trip.bus_type,
         day: localDate(trip.departure_time),
-        weekday: new Date(trip.departure_time).toLocaleDateString('en-GB', { weekday: 'long' }),
+        weekday: new Date(trip.departure_time).toLocaleDateString('en-GB', {
+          weekday: 'long',
+          timeZone: TZ,
+        }),
         trips: [],
       };
       index.set(key, group);

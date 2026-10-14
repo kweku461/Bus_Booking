@@ -3,6 +3,7 @@ import {
   AlertTriangle, ArrowRight, Banknote, Bus, Calendar, Check, Clock, MapPin, X,
 } from 'lucide-react';
 import { fmtTime } from '../utils/trips.js';
+import { formatDate, formatPrice } from '../utils/format.js';
 import '../styles/ConfirmTripModal.css';
 
 export default function ConfirmTripModal({ trip, onConfirm, onClose }) {
@@ -18,9 +19,10 @@ export default function ConfirmTripModal({ trip, onConfirm, onClose }) {
     };
   }, [onClose]);
 
-  const d = new Date(trip.departure_time);
-  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+  const date = formatDate(trip.departure_time, {
+    month: 'short', day: 'numeric', year: 'numeric',
+  });
+  const weekday = formatDate(trip.departure_time, { weekday: 'long' });
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -74,7 +76,7 @@ export default function ConfirmTripModal({ trip, onConfirm, onClose }) {
           </div>
           <div className="modal__tile">
             <small><Banknote size={15} /> Fare</small>
-            <strong>GH₵{Number(trip.price).toFixed(2)}</strong>
+            <strong>{formatPrice(trip.price)}</strong>
             <span>per passenger</span>
           </div>
           <div className="modal__tile">

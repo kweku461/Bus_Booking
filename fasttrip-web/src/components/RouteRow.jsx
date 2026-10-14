@@ -1,5 +1,6 @@
 import { useTripSelection } from '../hooks/useTripSelection.js';
 import { fmtTime } from '../utils/trips.js';
+import { formatPrice } from '../utils/format.js';
 import '../styles/RouteRow.css';
 
 export default function RouteRow({ group, onBook }) {
@@ -32,7 +33,7 @@ export default function RouteRow({ group, onBook }) {
       </div>
 
       <div className="route-row__price">
-        <strong>GH₵{selected ? Number(selected.price).toFixed(2) : '—'}</strong>
+        <strong>{selected ? formatPrice(selected.price) : '—'}</strong>
         <small className={low ? 'is-low' : ''}>
           {selected ? `${selected.seats_left} seats left` : 'Sold out'}
         </small>

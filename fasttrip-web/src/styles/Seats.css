@@ -138,3 +138,56 @@
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+/* Wrapper so the message can sit on top of the seat that was clicked */
+.seat-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.seat-limit {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: max-content;
+  max-width: 190px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, 0.15);
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  pointer-events: none;
+  animation: seat-limit-in 0.18s ease-out;
+}
+
+/* Little arrow pointing down at the seat */
+.seat-limit::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transform: translate(-50%, -5px) rotate(45deg);
+}
+
+@keyframes seat-limit-in {
+  from { opacity: 0; transform: translate(-50%, 4px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.seat-limit__star {
+  color: #dc2626;
+  font-weight: 700;
+  margin-right: 4px;
+}

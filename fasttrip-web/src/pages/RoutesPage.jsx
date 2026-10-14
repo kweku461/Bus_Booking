@@ -29,7 +29,7 @@ export default function RoutesPage() {
           <p>
             {loading
               ? 'Loading trips… the server may take a moment to wake up.'
-              : `${dayLabel(date)} · ${visible.length} departures`}
+              : `${dayLabel(date)} · ${visible.length} departure${visible.length === 1 ? '' : 's'}`}
           </p>
         </div>
 

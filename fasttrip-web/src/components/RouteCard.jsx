@@ -1,6 +1,7 @@
 import { Clock, Banknote, Users } from 'lucide-react';
 import { useTripSelection } from '../hooks/useTripSelection.js';
 import { fmtTime } from '../utils/trips.js';
+import { formatPrice } from '../utils/format.js';
 import '../styles/RouteCard.css';
 
 export default function RouteCard({ group, onBook }) {
@@ -35,7 +36,7 @@ export default function RouteCard({ group, onBook }) {
       <div className="route-card__buy">
         <Banknote size={22} />
         <strong className="route-card__price">
-          GH₵{selected ? Number(selected.price).toFixed(2) : '—'}
+          {selected ? formatPrice(selected.price) : '—'}
         </strong>
         <span className="route-card__per">per passenger</span>
         <span className={'route-card__seats' + (low ? ' is-low' : '')}>

@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Clock, Users } from 'lucide-react';
+import { formatDate, formatTime, formatPrice } from '../utils/format.js';
 import './TripCard.css';
 
 export default function TripCard({ trip }) {
-  const d = new Date(trip.departure_time);
-  const date = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const date = formatDate(trip.departure_time);
+  const time = formatTime(trip.departure_time);
   const low = trip.seats_left > 0 && trip.seats_left <= 5;
   const soldOut = trip.seats_left === 0;
 
@@ -30,7 +30,7 @@ export default function TripCard({ trip }) {
       </div>
 
       <div className="trip-card__bottom">
-        <span className="trip-card__price">GH₵{Number(trip.price).toFixed(0)}</span>
+        <span className="trip-card__price">{formatPrice(trip.price)}</span>
         {soldOut ? (
           <button className="btn btn--disabled" disabled>Sold out</button>
         ) : (

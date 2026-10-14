@@ -1,0 +1,57 @@
+.manage { padding: 40px 24px 60px; }
+
+.manage__head { text-align: center; margin-bottom: 28px; }
+.manage__head h1 { font-size: 1.8rem; margin-bottom: 8px; }
+.manage__head p { color: var(--muted); }
+
+.manage__form {
+  max-width: 440px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.manage__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.manage__field input {
+  height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+.manage__field input:focus { outline: 2px solid var(--indigo); outline-offset: -1px; }
+
+.manage__btn { height: 50px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.manage__btn:disabled { background: #c7c9d9; cursor: not-allowed; }
+
+.manage__hint { color: var(--muted); font-size: 0.85rem; text-align: center; }
+
+.manage__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* Print only the ticket */
+@media print {
+  .navbar,
+  .manage__head,
+  .manage__actions {
+    display: none !important;
+  }
+}

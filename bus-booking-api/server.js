@@ -315,8 +315,7 @@ app.post('/payments/verify', async (req, res) => {
     let found = await loadBooking(reference);
 
     if (!found) {
-      // The hold ran out before the payment finished, so the seats were released.
-      // Try to take the same seats back using the details saved with the payment.
+     
       const m = tx.metadata || {};
       const seats = Array.isArray(m.seats) ? m.seats : [];
       const t = Number.isInteger(m.trip_id)
@@ -377,6 +376,47 @@ app.post('/payments/verify', async (req, res) => {
     if (err.status === 404) {
       return res.status(404).json({ error: 'No payment found for this booking ID' });
     }
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
+// Public: look up a ticket. Needs BOTH the booking ID and the email used to book,
+// so a booking ID alone is never enough to see someone's ticket.
+app.post('/tickets/lookup', async (req, res) => {
+  const reference = String(req.body.reference || '').trim().toUpperCase();
+  const email = String(req.body.email || '').trim().toLowerCase();
+
+  if (!/^FT-[A-Z0-9]{8}$/.test(reference)) {
+    return res.status(400).json({ error: 'Enter a valid booking ID, like FT-7K3M9QXD' });
+  }
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ error: 'Enter the email you used to book' });
+  }
+
+  try {
+    await releaseExpiredHolds();
+
+    const found = await loadBooking(reference);
+
+    // Same message whether the ID is wrong or the email is wrong, so IDs can't be probed
+    if (!found || found.bookings[0].email.toLowerCase() !== email) {
+      return res.status(404).json({ error: 'No ticket found for that booking ID and email' });
+    }
+
+    if (found.bookings[0].status !== 'confirmed') {
+      return res.status(402).json({
+        error: 'This booking has not been paid for yet, so there is no ticket to show.',
+      });
+    }
+
+    res.json({
+      ...found,
+      reference,
+      amount: toPesewas(found.trip.price, found.bookings.length) / 100,
+    });
+  } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }

@@ -1,15 +1,16 @@
 import '../styles/Ticket.css';
+import { formatPrice } from '../utils/format.js';
+import { formatDate, formatTime } from '../utils/format.js';
 
 export default function Ticket({ trip, bookings, reference, amount }) {
   const first = bookings[0];
   const seats = bookings.map((b) => b.seat_number).sort((a, b) => a - b);
   const total = amount ?? seats.length * Number(trip.price);
 
-  const d = new Date(trip.departure_time);
-  const date = d.toLocaleDateString('en-GB', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  });
-  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  const date = formatDate(trip.departure_time, {
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+});
+const time = formatTime(trip.departure_time);
   const paid = first.status === 'confirmed';
 
   return (
@@ -49,8 +50,8 @@ export default function Ticket({ trip, bookings, reference, amount }) {
           <strong className="ticket__ref">{reference}</strong>
         </div>
         <div>
-          <small>Total paid</small>
-          <strong className="ticket__ref">GH₵{Number(total).toFixed(2)}</strong>
+          <small>{paid ? 'Total paid' : 'Total due'}</small>
+          <strong className="ticket__ref">{formatPrice(total)}</strong>
         </div>
       </div>
     </article>
